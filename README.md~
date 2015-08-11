@@ -6,6 +6,9 @@ https://github.com/mohiva/play-silhouette-seed
 
 The original template uses an array on memory to authenticate users, to use a MongoDB database instead, follow the step by step example.
 
+# Prerequisites
+# 
+
 Edit build.sbt and add the following
 
 ```scala
