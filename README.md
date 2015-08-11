@@ -1,0 +1,1 @@
+# play-silhouette-reactivemongo-seed
