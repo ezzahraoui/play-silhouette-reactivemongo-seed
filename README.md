@@ -52,5 +52,41 @@ def configure() {
   }
 }
 ```
+Inject DB to UserDAOImpl.scala and PasswordInfoDAO.scala
+
+```scala
+
+import javax.inject.Inject
+import reactivemongo.api._
+
+class UserDAOImpl @Inject() (db : DB) extends UserDAO {
+	
+}
+
+class PasswordInfoDAO @Inject() (db : DB) extends DelegableAuthInfoDAO[PasswordInfo] {
+	
+}
+
+```
+And finally rewrite functions on the both classes, here I will just show UserDaoImpl functions
+
+class UserDAOImpl @Inject() (db : DB) extends UserDAO {
+
+  def collection: JSONCollection = db.collection[JSONCollection]("user")
+
+  def find(loginInfo: LoginInfo) : Future[Option[User]] = {
+    collection.find(Json.obj( "loginInfo" -> loginInfo )).one[User]
+  }
+
+  def find(userID: UUID) : Future[Option[User]] = {
+    collection.find(Json.obj("userID" -> userID)).one[User]
+  }
+
+  def save(user: User) = {
+    collection.insert(user)
+    Future.successful(user)
+  }
+}
+
 
 
