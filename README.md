@@ -70,6 +70,8 @@ class PasswordInfoDAO @Inject() (db : DB) extends DelegableAuthInfoDAO[PasswordI
 ```
 And finally rewrite functions on the both classes, here I will just show UserDaoImpl functions
 
+```scala
+
 class UserDAOImpl @Inject() (db : DB) extends UserDAO {
 
   def collection: JSONCollection = db.collection[JSONCollection]("user")
@@ -87,6 +89,8 @@ class UserDAOImpl @Inject() (db : DB) extends UserDAO {
     Future.successful(user)
   }
 }
+
+```
 
 
 
