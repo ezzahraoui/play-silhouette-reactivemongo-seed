@@ -34,7 +34,8 @@ class ChangePasswordController @Inject() (
   credentialsProvider: CredentialsProvider,
   authInfoRepository: AuthInfoRepository,
   passwordHasherRegistry: PasswordHasherRegistry,
-  implicit val webJarAssets: WebJarAssets)
+  implicit val webJarAssets: WebJarAssets
+)
   extends Controller with I18nSupport {
 
   /**

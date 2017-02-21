@@ -34,7 +34,8 @@ class ResetPasswordController @Inject() (
   authInfoRepository: AuthInfoRepository,
   passwordHasherRegistry: PasswordHasherRegistry,
   authTokenService: AuthTokenService,
-  implicit val webJarAssets: WebJarAssets)
+  implicit val webJarAssets: WebJarAssets
+)
   extends Controller with I18nSupport {
 
   /**

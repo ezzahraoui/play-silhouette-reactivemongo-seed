@@ -30,7 +30,8 @@ class SocialAuthController @Inject() (
   userService: UserService,
   authInfoRepository: AuthInfoRepository,
   socialProviderRegistry: SocialProviderRegistry,
-  implicit val webJarAssets: WebJarAssets)
+  implicit val webJarAssets: WebJarAssets
+)
   extends Controller with I18nSupport with Logger {
 
   /**

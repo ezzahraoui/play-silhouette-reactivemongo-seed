@@ -13,8 +13,6 @@ import play.modules.reactivemongo.json._
 import play.modules.reactivemongo._
 import reactivemongo.play.json.collection.JSONCollection
 
-
-
 /**
  * Give access to the [[AuthToken]] object.
  */

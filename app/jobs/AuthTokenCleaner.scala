@@ -18,7 +18,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 class AuthTokenCleaner @Inject() (
   service: AuthTokenService,
-  clock: Clock)
+  clock: Clock
+)
   extends Actor with Logger {
 
   /**

@@ -4,101 +4,144 @@ This application is based on Silhouette seed Template:
 
 https://github.com/mohiva/play-silhouette-seed
 
+And Silhouette ReactiveMongo persistence layer:
+
+https://github.com/mohiva/play-silhouette-persistence-reactivemongo
+
 The original template uses an array on memory to authenticate users, to use a MongoDB database instead, follow the step by step example.
 
-Edit build.sbt and add the following
+Edit build.sbt and add the following dependencies
 
 ```scala
 libraryDependencies ++= Seq(
-  "org.reactivemongo" %% "play2-reactivemongo" % "0.11.5.play24"
+  "org.reactivemongo" %% "play2-reactivemongo" % "0.12.1",
+  "com.mohiva" %% "play-silhouette-persistence-reactivemongo" % "4.0.1"
 )
 ```
 
 Add ReactiveMongo configuration to application.conf
 
 ```scala
-mongodb {
-  db = "silhouette"
-  servers = [ "localhost:27017" ]
+play.modules.enabled += "play.modules.reactivemongo.ReactiveMongoModule"
+mongodb.uri = "mongodb://localhost:27017/test"
+```
+
+Add the implementation of the different delegables on SilhouetteModule.scala
+
+```scala
+/**
+ * Provides the implementation of the delegable OAuth1 auth info DAO.
+ *
+ * @param reactiveMongoApi The ReactiveMongo API.
+ * @param config The Play configuration.
+ * @return The implementation of the delegable OAuth1 auth info DAO.
+ */
+@Provides
+def provideOAuth1InfoDAO(reactiveMongoApi: ReactiveMongoApi, config: Configuration): DelegableAuthInfoDAO[OAuth1Info] = {
+  implicit lazy val format = Json.format[OAuth1Info]
+  new MongoAuthInfoDAO[OAuth1Info](reactiveMongoApi, config)
 }
 
-mongo-async-driver {
-  akka {
-    loglevel = DEBUG
-  }
+/**
+ * Provides the implementation of the delegable OAuth2 auth info DAO.
+ *
+ * @param reactiveMongoApi The ReactiveMongo API.
+ * @param config The Play configuration.
+ * @return The implementation of the delegable OAuth2 auth info DAO.
+ */
+@Provides
+def provideOAuth2InfoDAO(reactiveMongoApi: ReactiveMongoApi, config: Configuration): DelegableAuthInfoDAO[OAuth2Info] = {
+  implicit lazy val format = Json.format[OAuth2Info]
+  new MongoAuthInfoDAO[OAuth2Info](reactiveMongoApi, config)
+}
+
+/**
+ * Provides the implementation of the delegable OpenID auth info DAO.
+ *
+ * @param reactiveMongoApi The ReactiveMongo API.
+ * @param config The Play configuration.
+ * @return The implementation of the delegable OpenID auth info DAO.
+ */
+@Provides
+def provideOpenIDInfoDAO(reactiveMongoApi: ReactiveMongoApi, config: Configuration): DelegableAuthInfoDAO[OpenIDInfo] = {
+  implicit lazy val format = Json.format[OpenIDInfo]
+  new MongoAuthInfoDAO[OpenIDInfo](reactiveMongoApi, config)
+}
+
+/**
+ * Provides the implementation of the delegable password auth info DAO.
+ *
+ * @param reactiveMongoApi The ReactiveMongo API.
+ * @param config The Play configuration.
+ * @return The implementation of the delegable password auth info DAO.
+ */
+@Provides
+def providePasswordInfoDAO(reactiveMongoApi: ReactiveMongoApi, config: Configuration): DelegableAuthInfoDAO[PasswordInfo] = {
+  implicit lazy val format = Json.format[PasswordInfo]
+  new MongoAuthInfoDAO[PasswordInfo](reactiveMongoApi, config)
 }
 ```
 
-Add a DB dependency by editing SilhouetteModule.scala
+Inject ReactiveMongoApi on UserDAOImpl.scala and AuthTokenDAOImpl.scala
 
 ```scala
+class AuthTokenDAOImpl @Inject() (val reactiveMongoApi: ReactiveMongoApi) extends AuthTokenDAO
 
-import reactivemongo.api._
-
-def configure() {
-  bind[DB].toInstance {
-    import com.typesafe.config.ConfigFactory
-    import scala.concurrent.ExecutionContext.Implicits.global
-    import scala.collection.JavaConversions._
-
-    val config = ConfigFactory.load
-    val driver = new MongoDriver
-    val connection = driver.connection(
-      config.getStringList("mongodb.servers"),
-      MongoConnectionOptions(),
-      Seq()
-    )
-    connection.db(config.getString("mongodb.db"))
-  }
-}
+class UserDAOImpl @Inject() (val reactiveMongoApi: ReactiveMongoApi) extends UserDAO
 ```
-Inject DB to UserDAOImpl.scala and PasswordInfoDAO.scala
+
+Specify the collection name on both files
 
 ```scala
+def collection: Future[JSONCollection] = reactiveMongoApi.database.map(_.collection("silhouette.user"))
 
-import javax.inject.Inject
-import reactivemongo.api._
-
-class UserDAOImpl @Inject() (db : DB) extends UserDAO {
-	
-}
-
-class PasswordInfoDAO @Inject() (db : DB) extends DelegableAuthInfoDAO[PasswordInfo] {
-	
-}
-
+def collection: Future[JSONCollection] = reactiveMongoApi.database.map(_.collection("silhouette.token"))
 ```
-And finally rewrite functions on the both classes, here I will just show UserDaoImpl functions
+
+Rename password collections if needed on silhouette.conf
 
 ```scala
+persistence.reactivemongo.collection.OAuth1Info = "silhouette.password"
+persistence.reactivemongo.collection.OAuth2Info = "silhouette.password"
+persistence.reactivemongo.collection.OpenIDInfo = "silhouette.password"
+persistence.reactivemongo.collection.PasswordInfo = "silhouette.password"
+```
 
-import javax.inject.Inject
-import play.api.libs.json._
-import scala.concurrent.ExecutionContext.Implicits.global
+And finally rewrite functions on the both classes, for example I will show UserDaoImpl functions
 
-import reactivemongo.api._
-
-import play.modules.reactivemongo.json._
-import play.modules.reactivemongo.json.collection._
-
-class UserDAOImpl @Inject() (db : DB) extends UserDAO {
-
-  def collection: JSONCollection = db.collection[JSONCollection]("user")
-
-  def find(loginInfo: LoginInfo) : Future[Option[User]] = {
-    collection.find(Json.obj( "loginInfo" -> loginInfo )).one[User]
-  }
-
-  def find(userID: UUID) : Future[Option[User]] = {
-    collection.find(Json.obj("userID" -> userID)).one[User]
-  }
-
-  def save(user: User) = {
-    collection.insert(user)
-    Future.successful(user)
-  }
+```scala
+/**
+ * Finds a user by its login info.
+ *
+ * @param loginInfo The login info of the user to find.
+ * @return The found user or None if no user for the given login info could be found.
+ */
+def find(loginInfo: LoginInfo): Future[Option[User]] = {
+  val query = Json.obj("loginInfo" -> loginInfo)
+  collection.flatMap(_.find(query).one[User])
 }
 
+/**
+ * Finds a user by its user ID.
+ *
+ * @param userID The ID of the user to find.
+ * @return The found user or None if no user for the given ID could be found.
+ */
+def find(userID: UUID): Future[Option[User]] = {
+  val query = Json.obj("userID" -> userID)
+  collection.flatMap(_.find(query).one[User])
+}
+
+/**
+ * Saves a user.
+ *
+ * @param user The user to save.
+ * @return The saved user.
+ */
+def save(user: User): Future[User] = {
+  collection.flatMap(_.insert(user))
+  Future.successful(user)
+}
 ```
 
 

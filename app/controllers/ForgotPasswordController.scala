@@ -30,7 +30,8 @@ class ForgotPasswordController @Inject() (
   userService: UserService,
   authTokenService: AuthTokenService,
   mailerClient: MailerClient,
-  implicit val webJarAssets: WebJarAssets)
+  implicit val webJarAssets: WebJarAssets
+)
   extends Controller with I18nSupport {
 
   /**

@@ -14,7 +14,8 @@ import org.joda.time.DateTime
 case class AuthToken(
   id: UUID,
   userID: UUID,
-  expiry: DateTime)
+  expiry: DateTime
+)
 
 object AuthToken {
   implicit val jsonFormat = Json.format[AuthToken]
