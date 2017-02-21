@@ -1,9 +1,8 @@
 package models
 
 import java.util.UUID
-
+import play.api.libs.json._
 import com.mohiva.play.silhouette.api.{ Identity, LoginInfo }
-import play.api.libs.json.Json
 
 /**
  * The user object.
@@ -15,6 +14,7 @@ import play.api.libs.json.Json
  * @param fullName Maybe the full name of the authenticated user.
  * @param email Maybe the email of the authenticated provider.
  * @param avatarURL Maybe the avatar URL of the authenticated provider.
+ * @param activated Indicates that the user has activated its registration.
  */
 case class User(
   userID: UUID,
@@ -23,16 +23,24 @@ case class User(
   lastName: Option[String],
   fullName: Option[String],
   email: Option[String],
-  avatarURL: Option[String]) extends Identity
-
-/**
- * The companion object.
- */
-object User {
+  avatarURL: Option[String],
+  activated: Boolean) extends Identity {
 
   /**
-   * Converts the [User] object to Json and vice versa.
+   * Tries to construct a name.
+   *
+   * @return Maybe a name.
    */
-  implicit val jsonFormat = Json.format[User]
+  def name = fullName.orElse {
+    firstName -> lastName match {
+      case (Some(f), Some(l)) => Some(f + " " + l)
+      case (Some(f), None) => Some(f)
+      case (None, Some(l)) => Some(l)
+      case _ => None
+    }
+  }
+}
 
+object User {
+  implicit val jsonFormat = Json.format[User]
 }
