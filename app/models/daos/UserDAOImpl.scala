@@ -50,7 +50,7 @@ class UserDAOImpl @Inject() (val reactiveMongoApi: ReactiveMongoApi) extends Use
    * @return The saved user.
    */
   def save(user: User): Future[User] = {
-    collection.flatMap(_.insert(user))
+    collection.flatMap(_.update(Json.obj("userID" -> user.userID), user, upsert = true))
     Future.successful(user)
   }
 }
